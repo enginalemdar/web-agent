@@ -11,41 +11,43 @@ app.post("/crawl", async (req, res) => {
   try {
     const browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
     });
 
     const page = await browser.newPage();
     await page.goto("https://www.yatirimadestek.gov.tr/arama", {
-      waitUntil: "networkidle2",
+      waitUntil: "networkidle2"
     });
 
-    // Doğru input alanını bekle ve yaz
-    await page.waitForSelector("input.homeSearchInput", { timeout: 10000 });
-    await page.type("input.homeSearchInput", keyword);
+    // Arama kutusu yüklensin
+    await page.waitForSelector("input.homeSearchInput.searchMainText", { timeout: 10000 });
 
-    // "ARA" butonuna tıkla
+    // Arama kutusuna yaz
+    await page.type("input.homeSearchInput.searchMainText", keyword);
+
+    // Enter tuşuna basarak aramayı tetikle
     await Promise.all([
-      page.click("div.button > a"),
-      page.waitForNavigation({ waitUntil: "networkidle2" }),
+      page.keyboard.press("Enter"),
+      page.waitForNavigation({ waitUntil: "networkidle2" })
     ]);
 
-    // Sonuçları topla
+    // Sonuçları al
     const results = await page.evaluate(() => {
       const items = Array.from(document.querySelectorAll(".search-result-item"));
       return items.slice(0, 3).map((item) => ({
         title: item.querySelector("h5")?.innerText || "",
         summary: item.querySelector("p")?.innerText || "",
-        link: item.querySelector("a")?.href || "",
+        link: item.querySelector("a")?.href || ""
       }));
     });
 
     await browser.close();
 
-    // Webhook'a gönder
+    // Webhook'a sonuç gönder
     await fetch(webhook, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keyword, results }),
+      body: JSON.stringify({ keyword, results })
     });
 
     res.json({ status: "done", keyword, count: results.length });
