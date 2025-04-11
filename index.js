@@ -15,34 +15,32 @@ app.post("/crawl", async (req, res) => {
     });
 
     const page = await browser.newPage();
-
-    // Doğrudan arama sonuç sayfasına git
     const query = encodeURIComponent(keyword);
+
     await page.goto(`https://www.yatirimadestek.gov.tr/arama?q=${query}`, {
       waitUntil: "networkidle2"
     });
 
-    // Sayfa JS ile yükleniyor, destek blokları gelene kadar bekle
-    await page.waitForSelector(".destek-item", { timeout: 15000 });
+    // Beklenen elementin geldiğinden emin ol
+    await page.waitForSelector(".arama-sonuclar .item", { timeout: 20000 });
 
-    // Sonuçları topla
     const results = await page.evaluate(() => {
-      const blocks = document.querySelectorAll(".destek-item");
+      return Array.from(document.querySelectorAll(".arama-sonuclar .item")).map((item) => {
+        const title = item.querySelector(".baslik a")?.innerText?.trim() || "";
+        const url = item.querySelector(".baslik a")?.href || "";
+        const status = item.querySelector(".aktifCont .desc")?.innerText?.trim() || "";
 
-      return Array.from(blocks).map((block) => ({
-        title: block.querySelector("h3")?.innerText || "",
-        summary: block.querySelector(".ozet")?.innerText || "",
-        status: block.querySelector(".durum")?.innerText || "",
-        pdfs: Array.from(block.querySelectorAll("a[href$='.pdf']")).map(a => ({
-          name: a.innerText.trim(),
+        const pdfs = Array.from(item.querySelectorAll(".file-list .file-item a")).map((a) => ({
+          name: a.querySelector(".file-desc")?.innerText?.trim() || "",
           url: a.href
-        }))
-      }));
+        }));
+
+        return { title, url, status, pdfs };
+      });
     });
 
     await browser.close();
 
-    // Webhook'a POST et
     await fetch(webhook, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
