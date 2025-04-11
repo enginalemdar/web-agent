@@ -21,6 +21,7 @@ app.post("/crawl", async (req, res) => {
 
     // Arama kutusuna keyword yaz ve Enter'a bas
     await page.type("#aranan", keyword);
+    await page.waitForSelector("#aranan", { timeout: 10000 });
     await Promise.all([
       page.keyboard.press("Enter"),
       page.waitForNavigation({ waitUntil: "networkidle2" }),
