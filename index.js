@@ -19,15 +19,17 @@ app.post("/crawl", async (req, res) => {
       waitUntil: "networkidle2",
     });
 
-    // Arama kutusuna keyword yaz ve Enter'a bas
-    await page.type("#aranan", keyword);
-    await page.waitForSelector("#aranan", { timeout: 10000 });
+    // Doğru input alanını bekle ve yaz
+    await page.waitForSelector("input.homeSearchInput", { timeout: 10000 });
+    await page.type("input.homeSearchInput", keyword);
+
+    // "ARA" butonuna tıkla
     await Promise.all([
-      page.keyboard.press("Enter"),
+      page.click("div.button > a"),
       page.waitForNavigation({ waitUntil: "networkidle2" }),
     ]);
 
-    // İlk 3 sonucu topla
+    // Sonuçları topla
     const results = await page.evaluate(() => {
       const items = Array.from(document.querySelectorAll(".search-result-item"));
       return items.slice(0, 3).map((item) => ({
@@ -39,7 +41,7 @@ app.post("/crawl", async (req, res) => {
 
     await browser.close();
 
-    // Webhook'a POST et
+    // Webhook'a gönder
     await fetch(webhook, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
