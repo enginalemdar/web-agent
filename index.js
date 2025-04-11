@@ -15,39 +15,35 @@ app.post("/crawl", async (req, res) => {
     });
 
     const page = await browser.newPage();
-    await page.goto("https://www.yatirimadestek.gov.tr/arama", {
+
+    // Doğrudan arama sonuç sayfasına git
+    const query = encodeURIComponent(keyword);
+    await page.goto(`https://www.yatirimadestek.gov.tr/arama?q=${query}`, {
       waitUntil: "networkidle2"
     });
 
-    // Arama kutusu yüklensin
-    await page.waitForSelector("input.homeSearchInput.searchMainText", { timeout: 10000 });
-
-    // Arama kutusuna yaz
-    await page.type("input.homeSearchInput.searchMainText", keyword);
-
-    // Enter tuşuna basarak aramayı tetikle
-    await Promise.all([
-      page.keyboard.press("Enter"),
-      page.waitForNavigation({ waitUntil: "networkidle2" })
-    ]);
-
-    // Sonuçları al
+    // Sonuçları çek
     const results = await page.evaluate(() => {
-      const items = Array.from(document.querySelectorAll(".search-result-item"));
-      return items.slice(0, 3).map((item) => ({
-        title: item.querySelector("h5")?.innerText || "",
-        summary: item.querySelector("p")?.innerText || "",
-        link: item.querySelector("a")?.href || ""
+      const blocks = document.querySelectorAll(".destek-item");
+
+      return Array.from(blocks).map((block) => ({
+        title: block.querySelector("h3")?.innerText || "",
+        summary: block.querySelector(".ozet")?.innerText || "",
+        status: block.querySelector(".durum")?.innerText || "",
+        pdfs: Array.from(block.querySelectorAll("a[href$='.pdf']")).map(a => ({
+          name: a.innerText.trim(),
+          url: a.href
+        }))
       }));
     });
 
     await browser.close();
 
-    // Webhook'a sonuç gönder
+    // Webhook'a gönder
     await fetch(webhook, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keyword, results })
+      body: JSON.stringify({ keyword, resultCount: results.length, results })
     });
 
     res.json({ status: "done", keyword, count: results.length });
