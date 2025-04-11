@@ -22,7 +22,10 @@ app.post("/crawl", async (req, res) => {
       waitUntil: "networkidle2"
     });
 
-    // Sonuçları çek
+    // Sayfa JS ile yükleniyor, destek blokları gelene kadar bekle
+    await page.waitForSelector(".destek-item", { timeout: 15000 });
+
+    // Sonuçları topla
     const results = await page.evaluate(() => {
       const blocks = document.querySelectorAll(".destek-item");
 
@@ -39,7 +42,7 @@ app.post("/crawl", async (req, res) => {
 
     await browser.close();
 
-    // Webhook'a gönder
+    // Webhook'a POST et
     await fetch(webhook, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
