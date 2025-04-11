@@ -1,7 +1,6 @@
 {
-  "name": "yatirim-agent",
+  "name": "web-agent",
   "version": "1.0.0",
-  "description": "Keyword bazlı yatirimadestek.gov.tr crawler",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
