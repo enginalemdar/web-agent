@@ -6,7 +6,7 @@ const app = express();
 app.use(express.json());
 
 app.post("/crawl", async (req, res) => {
-  const { keyword, webhook } = req.body;
+  const { keyword, webhook, ajans_id = "", status = "", il_id = "" } = req.body;
 
   try {
     const browser = await puppeteer.launch({
@@ -15,13 +15,15 @@ app.post("/crawl", async (req, res) => {
     });
 
     const page = await browser.newPage();
-    const query = encodeURIComponent(keyword);
+    const query = encodeURIComponent(keyword || "");
+    const ajans = encodeURIComponent(ajans_id);
+    const durum = encodeURIComponent(status);
+    const il = encodeURIComponent(il_id);
 
-    await page.goto(`https://www.yatirimadestek.gov.tr/arama?q=${query}`, {
-      waitUntil: "networkidle2"
-    });
+    const url = `https://www.yatirimadestek.gov.tr/arama?q=${query}&ajans_id=${ajans}&status=${durum}&il_id=${il}`;
+    console.log(`🔍 Navigating to: ${url}`);
 
-    // Beklenen elementin geldiğinden emin ol
+    await page.goto(url, { waitUntil: "networkidle2" });
     await page.waitForSelector(".arama-sonuclar .item", { timeout: 20000 });
 
     const results = await page.evaluate(() => {
